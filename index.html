@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JSON to CSV Converter</title>
+    <script src="https://cdn.jsdelivr.net/npm/json2csv"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .converter-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 300px;
+            padding: 10px;
+            font-family: monospace;
+        }
+        button {
+            padding: 10px 20px;
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        .error {
+            color: red;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="converter-container">
+        <h1>JSON to CSV Converter</h1>
+        <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
+        <button onclick="convertToCSV()">Convert to CSV</button>
+        <div id="errorMessage" class="error"></div>
+    </div>
+
+    <script>
+        function convertToCSV() {
+            const jsonInput = document.getElementById('jsonInput').value;
+            const errorElement = document.getElementById('errorMessage');
+            errorElement.textContent = '';
+
+            try {
+                const data = JSON.parse(jsonInput);
+                const csv = json2csv.parse(data);
+                
+                // Create downloadable file
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'converted.csv';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                errorElement.textContent = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
