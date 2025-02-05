@@ -1,7 +1,8 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>JSON to CSV Converter (with Nested Object Support)</title>
+    <title>JSON to CSV Converter</title>
+    <script src="https://cdn.jsdelivr.net/npm/json2csv"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -35,7 +36,7 @@
 </head>
 <body>
     <div class="converter-container">
-        <h1>JSON to CSV Converter (with Nested Object Support)</h1>
+        <h1>JSON to CSV Converter</h1>
         <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
         <button onclick="convertToCSV()">Convert to CSV</button>
         <div id="errorMessage" class="error"></div>
@@ -49,7 +50,7 @@
 
             try {
                 const data = JSON.parse(jsonInput);
-                const csv = jsonToCSV(data);
+                const csv = json2csv.parse(data);
                 
                 // Create downloadable file
                 const blob = new Blob([csv], { type: 'text/csv' });
@@ -64,42 +65,6 @@
             } catch (error) {
                 errorElement.textContent = `Error: ${error.message}`;
             }
-        }
-
-        function jsonToCSV(data) {
-            const flattenedData = data.map(item => flattenObject(item));
-            const headers = [...new Set(flattenedData.flatMap(Object.keys))];
-            
-            const csvRows = [
-                headers.join(','),
-                ...flattenedData.map(row =>
-                    headers.map(header => 
-                        JSON.stringify(row[header] ?? '')
-                    ).join(',')
-                )
-            ];
-
-            return csvRows.join('\n');
-        }
-
-        function flattenObject(obj, prefix = '') {
-            return Object.keys(obj).reduce((acc, k) => {
-                const pre = prefix.length ? prefix + '.' : '';
-                if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
-                    Object.assign(acc, flattenObject(obj[k], pre + k));
-                } else if (Array.isArray(obj[k])) {
-                    obj[k].forEach((item, index) => {
-                        if (typeof item === 'object' && item !== null) {
-                            Object.assign(acc, flattenObject(item, `${pre}${k}[${index}]`));
-                        } else {
-                            acc[`${pre}${k}[${index}]`] = item;
-                        }
-                    });
-                } else {
-                    acc[pre + k] = obj[k];
-                }
-                return acc;
-            }, {});
         }
     </script>
 </body>
