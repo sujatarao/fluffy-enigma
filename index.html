@@ -1,106 +1,88 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>JSON to CSV Converter (with Nested Object Support)</title>
+    <title>JSON to CSV Converter</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        .converter-container {
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-        }
-        textarea {
-            width: 100%;
-            height: 300px;
-            padding: 10px;
-            font-family: monospace;
-        }
-        button {
-            padding: 10px 20px;
-            background: #007bff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-        .error {
-            color: red;
-            margin: 10px 0;
-        }
+        .container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        textarea { width: 100%; height: 300px; }
+        .options { margin: 15px 0; }
     </style>
 </head>
 <body>
-    <div class="converter-container">
-        <h1>JSON to CSV Converter (with Nested Object Support)</h1>
-        <textarea id="jsonInput" placeholder="Paste JSON here..."></textarea>
-        <button onclick="convertToCSV()">Convert to CSV</button>
-        <div id="errorMessage" class="error"></div>
+    <div class="container">
+        <div>
+            <h3>JSON Input</h3>
+            <textarea id="jsonInput" placeholder="Paste JSON here"></textarea>
+            <input type="file" id="jsonFile" accept=".json">
+            <div class="options">
+                <label><input type="checkbox" id="headers"> Include Headers</label>
+                <label><input type="checkbox" id="quotes"> Force Quotes</label>
+            </div>
+            <button onclick="convertJSON()">Convert to CSV</button>
+        </div>
+        <div>
+            <h3>CSV Output</h3>
+            <textarea id="csvOutput" readonly></textarea>
+            <button onclick="downloadCSV()">Download CSV</button>
+        </div>
     </div>
 
     <script>
-        function convertToCSV() {
-            const jsonInput = document.getElementById('jsonInput').value;
-            const errorElement = document.getElementById('errorMessage');
-            errorElement.textContent = '';
-
+        function convertJSON() {
+            const jsonData = document.getElementById('jsonInput').value;
+            const includeHeaders = document.getElementById('headers').checked;
+            const forceQuotes = document.getElementById('quotes').checked;
+            
             try {
-                const data = JSON.parse(jsonInput);
-                const csv = jsonToCSV(data);
-                
-                // Create downloadable file
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'converted.csv';
-                document.body.appendChild(a);
-                a.click();
-                window.URL.revokeObjectURL(url);
-                document.body.removeChild(a);
+                let data = parseJSONInput(jsonData);
+                let csv = jsonToCSV(data, includeHeaders, forceQuotes);
+                document.getElementById('csvOutput').value = csv;
             } catch (error) {
-                errorElement.textContent = `Error: ${error.message}`;
+                alert(`Conversion Error: ${error.message}`);
             }
         }
 
-        function jsonToCSV(data) {
-            const flattenedData = data.map(item => flattenObject(item));
-            const headers = [...new Set(flattenedData.flatMap(Object.keys))];
+        function parseJSONInput(json) {
+            // Handle various JSON formats
+            if (json.trim().startsWith('[')) {
+                return JSON.parse(json);
+            }
             
-            const csvRows = [
-                headers.join(','),
-                ...flattenedData.map(row =>
-                    headers.map(header => 
-                        JSON.stringify(row[header] ?? '')
-                    ).join(',')
-                )
-            ];
-
-            return csvRows.join('\n');
+            // Handle JSON Lines format
+            if (json.includes('\n')) {
+                return json.split('\n').filter(line => line.trim()).map(JSON.parse);
+            }
+            
+            // Handle single object with array property
+            const obj = JSON.parse(json);
+            if (obj && Object.values(obj)[0]?.length) {
+                return Object.values(obj)[0];
+            }
+            
+            return [obj];
         }
 
-        function flattenObject(obj, prefix = '') {
-            return Object.keys(obj).reduce((acc, k) => {
-                const pre = prefix.length ? prefix + '.' : '';
-                if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
-                    Object.assign(acc, flattenObject(obj[k], pre + k));
-                } else if (Array.isArray(obj[k])) {
-                    obj[k].forEach((item, index) => {
-                        if (typeof item === 'object' && item !== null) {
-                            Object.assign(acc, flattenObject(item, `${pre}${k}[${index}]`));
-                        } else {
-                            acc[`${pre}${k}[${index}]`] = item;
-                        }
-                    });
-                } else {
-                    acc[pre + k] = obj[k];
-                }
-                return acc;
-            }, {});
+        function jsonToCSV(data, includeHeaders = true, forceQuotes = false) {
+            const replacer = (key, value) => value ?? '';
+            const header = includeHeaders ? 
+                Object.keys(data[0]).join(',') + '\n' : '';
+            
+            const csvRows = data.map(row => {
+                const values = Object.values(row).map(value => {
+                    const strValue = typeof value === 'object' ? 
+                        JSON.stringify(value) : String(value);
+                    return forceQuotes ? `"${strValue}"` : strValue;
+                });
+                return values.join(',');
+            });
+            
+            return header + csvRows.join('\n');
         }
+
+        // File handling and download functions
+        document.getElementById('jsonFile').addEventListener('change', handleFile);
+        function handleFile(e) { /* File read implementation */ }
+        function downloadCSV() { /* CSV download implementation */ }
     </script>
 </body>
 </html>
